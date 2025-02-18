@@ -2,6 +2,29 @@ import * as Cesium from "cesium";
 import { Viewer } from "cesium";
 import InterpolationAlgorithm from "cesium/Source/Core/InterpolationAlgorithm";
 
+// 创建初始相机位置
+const initialPosition = Cesium.Cartesian3.fromDegrees(
+  -73.998114468289017509,
+  40.674512895646692812,
+  2631.082799425431
+);
+// 创建初始相机方向
+const initialOrientation = Cesium.HeadingPitchRoll.fromDegrees(
+  7.1077496389876024807,
+  -31.987223091598949054,
+  0.025883251314954971306
+);
+// 定义初始相机视图
+const homeCameraView = {
+  destination: initialPosition, // 目标位置或区域。
+  orientation: {
+    //  相机的方向（航向角、俯仰角和翻滚角）。
+    heading: initialOrientation.heading,
+    pitch: initialOrientation.pitch,
+    roll: initialOrientation.roll,
+  },
+};
+
 class CesiumEarch {
   viewer!: Viewer; // Cesium Viewer 对象
 
@@ -50,7 +73,7 @@ class CesiumEarch {
     );
     this.viewer.scene.debugShowFramesPerSecond = true;
     this.createImageryProvider();
-    this.CameraModes();
+    this.Extras();
   }
 
   // 销毁地图
@@ -147,28 +170,7 @@ class CesiumEarch {
     // Camera.rotate(axis, angle) : 绕任意轴旋转相机。
     // 使用 CesiumJS 时用于启用基于太阳和月亮位置的光照效果
     this.viewer.scene.globe.enableLighting = true;
-    // // 创建初始相机位置
-    // const initialPosition = Cesium.Cartesian3.fromDegrees(
-    //   -73.998114468289017509,
-    //   40.674512895646692812,
-    //   2631.082799425431
-    // );
-    // // 创建初始相机方向
-    // const initialOrientation = Cesium.HeadingPitchRoll.fromDegrees(
-    //   7.1077496389876024807,
-    //   -31.987223091598949054,
-    //   0.025883251314954971306
-    // );
-    // // 定义初始相机视图
-    // const homeCameraView = {
-    //   destination: initialPosition, // 目标位置或区域。
-    //   orientation: {
-    //     //  相机的方向（航向角、俯仰角和翻滚角）。
-    //     heading: initialOrientation.heading,
-    //     pitch: initialOrientation.pitch,
-    //     roll: initialOrientation.roll,
-    //   },
-    // };
+
     // this.viewer.scene.camera.setView(homeCameraView);
     // this.viewer.scene.camera.flyTo({
     //   ...homeCameraView,
@@ -200,12 +202,12 @@ class CesiumEarch {
     /**
      * @描述：4  Loading and Styling Entities - 加载和样式化实体
      */
-    this.stylingEntitiesFun();
+    // this.stylingEntitiesFun();
 
     /**
      * @描述：5  3D Tiles
      */
-    this.TilesFun();
+    // this.TilesFun();
   }
 
   /**
@@ -518,6 +520,12 @@ class CesiumEarch {
         interpolationDegree: 3,
         InterpolationAlgorithm: Cesium.HermitePolynomialApproximation,
       });
+      // 跟踪一个实体 视角追踪无人机
+      // this.viewer.trackedEntity = drone;
+
+      // 1 取消跟踪 2 返回视角到初始视角
+      this.viewer.trackedEntity = undefined;
+      this.viewer.scene.camera.flyTo(homeCameraView);
     });
   }
 
@@ -605,9 +613,48 @@ class CesiumEarch {
   };
 
   /**
-   * Camera Modes - 相机模式
+   *  以上为初级教程 ↑↑↑↑↑↑↑
+   *
+   *  以下为中级教程 ↓↓↓↓↓↓↓
+   *  1 空间数据可视化
    */
-  public CameraModes = async () => {};
+  public Extras = async () => {
+    // 创建面
+    const ehm = this.viewer.entities.add({
+      name: "Wyoming",
+      polygon: {
+        hierarchy: new Cesium.PolygonHierarchy(
+          Cesium.Cartesian3.fromDegreesArray([
+            -109.080842, 45.002073, -105.91517, 45.002073, -104.058488,
+            44.996596, -104.053011, 43.002989, -104.053011, 41.003906,
+            -105.728954, 40.998429, -107.919731, 41.003906, -109.04798,
+            40.998429, -111.047063, 40.998429, -111.047063, 42.000709,
+            -111.047063, 44.476286, -111.05254, 45.002073,
+          ])
+        ),
+        height: 0,
+        fill: true,
+        material: Cesium.Color.RED.withAlpha(0.5),
+        outline: true,
+        outlineColor: Cesium.Color.BLACK,
+      },
+    });
+
+    // 创建椭圆
+    const tuoyuan = this.viewer.entities.add({
+      name: "椭圆",
+      position: Cesium.Cartesian3.fromDegrees(-103.0, 40.0),
+      ellipse: {
+        semiMinorAxis: 250000.0,
+        semiMajorAxis: 400000.0,
+      },
+    });
+    const ellipse: any = tuoyuan.ellipse;
+    ellipse.material =
+      "//sandcastle.cesium.com/images/Cesium_Logo_Color_Overlay.png";
+
+    this.viewer.zoomTo(tuoyuan);
+  };
 }
 
 export default new CesiumEarch();
