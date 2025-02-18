@@ -50,7 +50,7 @@ class CesiumEarch {
     );
     this.viewer.scene.debugShowFramesPerSecond = true;
     this.createImageryProvider();
-    this.TilesFun();
+    this.CameraModes();
   }
 
   // 销毁地图
@@ -200,12 +200,12 @@ class CesiumEarch {
     /**
      * @描述：4  Loading and Styling Entities - 加载和样式化实体
      */
-    // this.stylingEntitiesFun();
+    this.stylingEntitiesFun();
 
     /**
      * @描述：5  3D Tiles
      */
-    // this.TilesFun();
+    this.TilesFun();
   }
 
   /**
@@ -547,37 +547,67 @@ class CesiumEarch {
         ],
       },
     });
-    // 等待加载完成
-    city.readyPromise.then(() => {
-      city.style = defaultStyle;
 
-      // 创建事件处理器
-      var previousPickedEntity: any;
-      var handler = this.viewer.screenSpaceEventHandler;
-      handler.setInputAction((movement: any) => {
-        var pickedPrimitive = this.viewer.scene.pick(movement.endPosition);
-        console.log(pickedPrimitive);
-        var pickedEntity = Cesium.defined(pickedPrimitive)
-          ? pickedPrimitive._content
-          : undefined;
-        // Unhighlight the previously picked entity
-        if (Cesium.defined(previousPickedEntity)) {
-          previousPickedEntity.billboard.scale = 1.0;
-          previousPickedEntity.billboard.color = Cesium.Color.WHITE;
-        }
-        console.log(pickedEntity);
-        // Highlight the currently picked entity
-        if (
-          Cesium.defined(pickedEntity) &&
-          Cesium.defined(pickedEntity.billboard)
-        ) {
-          pickedEntity.billboard.scale = 2.0;
-          pickedEntity.billboard.color = Cesium.Color.ORANGERED;
-          previousPickedEntity = pickedEntity;
-        }
-      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
-    });
+    const highlighted: any = {
+      feature: undefined,
+      originalColor: new Cesium.Color(),
+    };
+    city.style = heightStyle;
+
+    var handler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
+
+    const div = document.createElement("div");
+    this.viewer.container.appendChild(div);
+    div.className = "backdrop";
+    div.style.display = "none";
+    div.style.position = "absolute";
+    div.style.bottom = "0";
+    div.style.left = "0";
+    div.style.backgroundColor = "#303030";
+    let tableHtmlScratch = "";
+    let materialsScratch;
+
+    handler.setInputAction((movement: any) => {
+      if (Cesium.defined(highlighted.feature)) {
+        highlighted.feature.color = highlighted.originalColor;
+        highlighted.feature = undefined;
+      }
+      // 获取实体
+      var feature = this.viewer.scene.pick(movement.endPosition);
+      const featurePickd = feature instanceof Cesium.Cesium3DTileFeature;
+
+      // 是否有height属性
+      const isBuildingFeature = featurePickd && feature.hasProperty("Height");
+      const isTerrainFeature =
+        featurePickd && feature.hasProperty("Majority_Ownership_Type");
+
+      if (isTerrainFeature) {
+        div.style.display = "block";
+        div.style.bottom = `${
+          this.viewer.canvas.clientHeight - movement.endPosition.y
+        }px`;
+        div.style.left = `${movement.endPosition.x}px`;
+
+        materialsScratch = feature.getProperty("Majority_Ownership_Type");
+
+        tableHtmlScratch = `<span>${materialsScratch ?? ""}</span>`;
+        div.innerHTML = tableHtmlScratch;
+      } else {
+        div.style.display = "none";
+      }
+
+      if (isBuildingFeature) {
+        highlighted.feature = feature;
+        Cesium.Color.clone(feature.color, highlighted.originalColor);
+        feature.color = Cesium.Color.MAGENTA;
+      }
+    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
   };
+
+  /**
+   * Camera Modes - 相机模式
+   */
+  public CameraModes = async () => {};
 }
 
 export default new CesiumEarch();
