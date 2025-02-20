@@ -1,5 +1,6 @@
 import * as Cesium from "cesium";
 import { Viewer } from "cesium";
+import Cartesian2 from "cesium/Source/Core/Cartesian2";
 import InterpolationAlgorithm from "cesium/Source/Core/InterpolationAlgorithm";
 
 // 创建初始相机位置
@@ -73,7 +74,7 @@ class CesiumEarch {
     );
     this.viewer.scene.debugShowFramesPerSecond = true;
     this.createImageryProvider();
-    this.Extras();
+    // this.Extras();
   }
 
   // 销毁地图
@@ -83,20 +84,21 @@ class CesiumEarch {
 
   // 创建新图层（影像、标注）
   public async createImageryProvider() {
-    let blackMarble = this.viewer.imageryLayers.addImageryProvider(
-      new Cesium.WebMapTileServiceImageryProvider({
-        url:
-          "http://t{s}.tianditu.com/cia_w/wmts?service=wmts&request=GetTile&version=1.0.0&LAYER=cia&tileMatrixSet=w&TileMatrix={TileMatrix}&TileRow={TileRow}&TileCol={TileCol}&style=default.jpg&tk=" +
-          "d57610ac1d14c2abe37314f2a2de558a",
-        subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"], // URL模板中用于{s}占位符的子域。如果该参数是单个字符串，则字符串中的每个字符都是一个子域。如果它是一个数组，数组中的每个元素都是一个子域
-        layer: "tdtImgLayer",
-        style: "default",
-        format: "image/jpeg",
-        tileMatrixSetID: "GoogleMapsCompatible", // 使用谷歌的瓦片切片方式
-      })
-    );
-    blackMarble.alpha = 0.5; // 透明度 imageryLayer
-    blackMarble.brightness = 2.0; // 亮度 imageryLayer
+    // let blackMarble = this.viewer.imageryLayers
+      // .addImageryProvider
+      // new Cesium.WebMapTileServiceImageryProvider({
+      //   url:
+      //     "http://t{s}.tianditu.com/cia_w/wmts?service=wmts&request=GetTile&version=1.0.0&LAYER=cia&tileMatrixSet=w&TileMatrix={TileMatrix}&TileRow={TileRow}&TileCol={TileCol}&style=default.jpg&tk=" +
+      //     "d57610ac1d14c2abe37314f2a2de558a",
+      //   subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"], // URL模板中用于{s}占位符的子域。如果该参数是单个字符串，则字符串中的每个字符都是一个子域。如果它是一个数组，数组中的每个元素都是一个子域
+      //   layer: "tdtImgLayer",
+      //   style: "default",
+      //   format: "image/jpeg",
+      //   tileMatrixSetID: "GoogleMapsCompatible", // 使用谷歌的瓦片切片方式
+      // })
+      // ();
+    // blackMarble.alpha = 0.5; // 透明度 imageryLayer
+    // blackMarble.brightness = 2.0; // 亮度 imageryLayer
 
     /**
      * @描述：1 通过cesiumIcon增加影像
@@ -621,7 +623,7 @@ class CesiumEarch {
   public Extras = async () => {
     // 创建面
     const ehm = this.viewer.entities.add({
-      name: "Wyoming",
+      name: "Wyoming polygon",
       polygon: {
         hierarchy: new Cesium.PolygonHierarchy(
           Cesium.Cartesian3.fromDegreesArray([
@@ -639,21 +641,81 @@ class CesiumEarch {
         outlineColor: Cesium.Color.BLACK,
       },
     });
+    // 提高面的高度
+    (ehm as any).polygon.height = 200000;
+    (ehm as any).polygon.extrudedHeight = 250000;
+    // 以上两个代码生成一个立方体
+    this.viewer.zoomTo(ehm);
 
     // 创建椭圆
     const tuoyuan = this.viewer.entities.add({
-      name: "椭圆",
+      name: "椭圆 ellipse",
       position: Cesium.Cartesian3.fromDegrees(-103.0, 40.0),
       ellipse: {
         semiMinorAxis: 250000.0,
         semiMajorAxis: 400000.0,
+        // material: Cesium.Color.BLACK.withAlpha(0.3), // 纯色
+        // 棋盘
+        // material: new Cesium.CheckerboardMaterialProperty({
+        //   evenColor: Cesium.Color.YELLOWGREEN,
+        //   oddColor: Cesium.Color.BLACK,
+        //   repeat: new Cesium.Cartesian2(10, 10),
+        // }),
+        // 条纹
+        // material: new Cesium.StripeMaterialProperty({
+        //   evenColor: Cesium.Color.WHITE,
+        //   oddColor: Cesium.Color.BLACK,
+        //   repeat: 33,
+        // }),
+        // 网格
+        // material: new Cesium.GridMaterialProperty({
+        //   color: Cesium.Color.YELLOWGREEN,
+        //   cellAlpha: 0.3,
+        //   lineCount: new Cesium.Cartesian2(8, 10),
+        //   lineThickness: new Cesium.Cartesian2(2, 2),
+        // }),
       },
     });
+    // 轮廓
     const ellipse: any = tuoyuan.ellipse;
-    ellipse.material =
-      "//sandcastle.cesium.com/images/Cesium_Logo_Color_Overlay.png";
+    ellipse.fill = false;
+    ellipse.outline = true;
+    ellipse.outlineColor = Cesium.Color.YELLOW;
+    ellipse.outlineWidth = 2;
 
-    this.viewer.zoomTo(tuoyuan);
+    // 折线
+    const polyline = this.viewer.entities.add({
+      polyline: {
+        positions: Cesium.Cartesian3.fromDegreesArray([-77, 35, -77.1, 35]),
+        width: 5,
+        // 纯色
+        // material: Cesium.Color.RED,
+        // 轮廓
+        // material: new Cesium.PolylineOutlineMaterialProperty({
+        //   color: Cesium.Color.ORANGE,
+        //   outlineColor: Cesium.Color.BLACK,
+        //   outlineWidth: 3,
+        // }),
+        // 折线光晕
+        material: new Cesium.PolylineGlowMaterialProperty({
+          glowPower: 0.2,
+          color: Cesium.Color.ORANGE,
+        }),
+      },
+    });
+  };
+
+  /**
+   *  2  图层
+   */
+  public Layer = async () => {
+    // 修改影像图
+    var layers = this.viewer.scene.imageryLayers;
+    var blackMarble = layers.addImageryProvider(
+      new Cesium.IonImageryProvider({
+        assetId: 3812, // 替换为实际的 Ion 资源 ID（如 3812）
+      })
+    );
   };
 }
 
