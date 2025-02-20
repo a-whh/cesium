@@ -35,12 +35,11 @@ class CesiumEarch {
     Cesium.Ion.defaultAccessToken =
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3NzcxMDJhNS03ODAxLTQ5ZjctYTUyZS04ZWVmZjNmNzczYWIiLCJpZCI6MjcwMDkxLCJpYXQiOjE3MzczNDAwMjB9.EhOlLecfLKZHPaUcmgDjWKt_d_2cN_XX03_X7rrk9gY";
     // ArcGIS MapServer 影像服务
-    // const esri = new Cesium.ArcGisMapServerImageryProvider(
-    //   {
-    //     url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer',
-    //     enablePickFeatures: false
-    //   }
-    // )
+    const esri = new Cesium.ArcGisMapServerImageryProvider({
+      // url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer",
+      url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer",
+      enablePickFeatures: false,
+    });
 
     // 创建 Cesium Viewer 对象
     this.viewer = window.viewer = new Cesium.Viewer(
@@ -49,7 +48,7 @@ class CesiumEarch {
         {
           // imageryProvider: esri, // 自定义图层，默认谷歌影像图层
           // imageryProvider: new Cesium.TileMapServiceImageryProvider({
-          //   url: Cesium.buildModuleUrl('Assets/Textures/NaturalEarthII')
+          //   url: Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),
           // }),
           orderIndependentTranslucency: false, // 是否关闭透明度排序
           contextOptions: {
@@ -75,6 +74,7 @@ class CesiumEarch {
     this.viewer.scene.debugShowFramesPerSecond = true;
     this.createImageryProvider();
     // this.Extras();
+    this.Layer();
   }
 
   // 销毁地图
@@ -85,18 +85,18 @@ class CesiumEarch {
   // 创建新图层（影像、标注）
   public async createImageryProvider() {
     // let blackMarble = this.viewer.imageryLayers
-      // .addImageryProvider
-      // new Cesium.WebMapTileServiceImageryProvider({
-      //   url:
-      //     "http://t{s}.tianditu.com/cia_w/wmts?service=wmts&request=GetTile&version=1.0.0&LAYER=cia&tileMatrixSet=w&TileMatrix={TileMatrix}&TileRow={TileRow}&TileCol={TileCol}&style=default.jpg&tk=" +
-      //     "d57610ac1d14c2abe37314f2a2de558a",
-      //   subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"], // URL模板中用于{s}占位符的子域。如果该参数是单个字符串，则字符串中的每个字符都是一个子域。如果它是一个数组，数组中的每个元素都是一个子域
-      //   layer: "tdtImgLayer",
-      //   style: "default",
-      //   format: "image/jpeg",
-      //   tileMatrixSetID: "GoogleMapsCompatible", // 使用谷歌的瓦片切片方式
-      // })
-      // ();
+    // .addImageryProvider
+    // new Cesium.WebMapTileServiceImageryProvider({
+    //   url:
+    //     "http://t{s}.tianditu.com/cia_w/wmts?service=wmts&request=GetTile&version=1.0.0&LAYER=cia&tileMatrixSet=w&TileMatrix={TileMatrix}&TileRow={TileRow}&TileCol={TileCol}&style=default.jpg&tk=" +
+    //     "d57610ac1d14c2abe37314f2a2de558a",
+    //   subdomains: ["0", "1", "2", "3", "4", "5", "6", "7"], // URL模板中用于{s}占位符的子域。如果该参数是单个字符串，则字符串中的每个字符都是一个子域。如果它是一个数组，数组中的每个元素都是一个子域
+    //   layer: "tdtImgLayer",
+    //   style: "default",
+    //   format: "image/jpeg",
+    //   tileMatrixSetID: "GoogleMapsCompatible", // 使用谷歌的瓦片切片方式
+    // })
+    // ();
     // blackMarble.alpha = 0.5; // 透明度 imageryLayer
     // blackMarble.brightness = 2.0; // 亮度 imageryLayer
 
@@ -709,13 +709,18 @@ class CesiumEarch {
    *  2  图层
    */
   public Layer = async () => {
-    // 修改影像图
-    var layers = this.viewer.scene.imageryLayers;
-    var blackMarble = layers.addImageryProvider(
-      new Cesium.IonImageryProvider({
-        assetId: 3812, // 替换为实际的 Ion 资源 ID（如 3812）
+    const layer = this.viewer.scene.imageryLayers;
+    const blackMarble = layer.addImageryProvider(
+      new Cesium.ArcGisMapServerImageryProvider({
+        url: "https://services.arcgisonline.com/arcgis/rest/services/World_Shaded_Relief/MapServer",
+        maximumLevel: 8,
+        credit: "Black Marble imagery courtesy NASA Earth Observatory",
       })
     );
+    // 透明度
+    blackMarble.alpha = 0.5;
+    // 亮度
+    blackMarble.brightness = 1;
   };
 }
 
