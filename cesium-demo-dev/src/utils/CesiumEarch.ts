@@ -74,7 +74,7 @@ class CesiumEarch {
     this.viewer.scene.debugShowFramesPerSecond = true;
     this.createImageryProvider();
     // this.Extras();
-    this.Layer();
+    this.cameraFn();
   }
 
   // 销毁地图
@@ -708,20 +708,128 @@ class CesiumEarch {
   /**
    *  2  图层
    */
-  public Layer = async () => {
+  public LayerFn = async () => {
     const layer = this.viewer.scene.imageryLayers;
-    const blackMarble = layer.addImageryProvider(
-      new Cesium.ArcGisMapServerImageryProvider({
-        url: "https://services.arcgisonline.com/arcgis/rest/services/World_Shaded_Relief/MapServer",
-        maximumLevel: 8,
-        credit: "Black Marble imagery courtesy NASA Earth Observatory",
-      })
-    );
+    const a = new Cesium.ArcGisMapServerImageryProvider({
+      url: "https://services.arcgisonline.com/arcgis/rest/services/World_Shaded_Relief/MapServer",
+      maximumLevel: 8,
+      credit: "Black Marble imagery courtesy NASA Earth Observatory",
+    });
+    const blackMarble = layer.addImageryProvider(a);
+
     // 透明度
     blackMarble.alpha = 0.5;
     // 亮度
     blackMarble.brightness = 1;
   };
-}
 
+  /**
+   *  3  Camera  相机
+   */
+  public cameraFn = async () => {
+    //   this.viewer.camera.setView({
+    //     destination: Cesium.Cartesian3.fromDegrees(-117.16, 32.71, 1000),
+    //     orientation: {
+    //       heading: 0,
+    //       pitch: 0,
+    //       roll: 0,
+    //     },
+    //   });
+
+    // 禁用默认事件操作
+    const scene = this.viewer.scene;
+    const canvas = this.viewer.canvas;
+    canvas.setAttribute("tabindex", "0"); // 设置canvas的tabindex属性为0，使其可以接受键盘事件
+    canvas.onclick = function () {
+      canvas.focus(); // 点击canvas时，使canvas获得焦点
+    };
+    const ellipsoid = this.viewer.scene.globe.ellipsoid; // 获取地球的椭球体
+    scene.screenSpaceCameraController.enableRotate = false; // 禁用旋转
+    scene.screenSpaceCameraController.enableZoom = false; // 禁用缩放
+    scene.screenSpaceCameraController.enableTranslate = false; // 禁用平移
+    scene.screenSpaceCameraController.enableTilt = false; // 禁用倾斜
+    scene.screenSpaceCameraController.enableLook = false; // 禁用视角
+    // 创建变量记录当前鼠标位置，然后标记并跟随Camera移动轨迹：
+    let startMousePosition: any;
+    let mousePosition: any;
+    const flags = {
+      looking: false,
+      moveForward: false,
+      moveBackward: false,
+      moveUp: false,
+      moveDown: false,
+      moveLeft: false,
+      moveRight: false,
+    };
+    // 添加一个事件控制用户设置标记，当鼠标左键被点击的时候，用于记录当前鼠标的位置：
+    const handler = new Cesium.ScreenSpaceEventHandler(canvas);
+    handler.setInputAction((movement: any) => {
+      flags.looking = true;
+      mousePosition = startMousePosition = Cesium.Cartesian3.clone(
+        movement.position
+      );
+    }, Cesium.ScreenSpaceEventType.LEFT_DOWN); // 鼠标左键点击事件
+    handler.setInputAction((movement: any) => {
+      mousePosition = movement.endPosition;
+    }, Cesium.ScreenSpaceEventType.MOUSE_MOVE); // 鼠标移动事件
+    handler.setInputAction((position: any) => {
+      flags.looking = false;
+    }, Cesium.ScreenSpaceEventType.LEFT_UP); // 鼠标左键释放事件
+
+    // 创建键盘事件控制用户切换Camera移动标记。我们为下列按键和行为设置了标记：
+    function getFlagForKeyCode(keyCode: number) {
+      switch (keyCode) {
+        case "W".charCodeAt(0):
+          return "moveForward";
+        case "S".charCodeAt(0):
+          return "moveBackward";
+        case "Q".charCodeAt(0):
+          return "moveUp";
+        case "E".charCodeAt(0):
+          return "moveDown";
+        case "D".charCodeAt(0):
+          return "moveRight";
+        case "A".charCodeAt(0):
+          return "moveLeft";
+        default:
+          return undefined;
+      }
+    }
+
+    document.addEventListener(
+      "keydown",
+      (event) => {
+        const flagName = getFlagForKeyCode(event.keyCode);
+        if (typeof flagName !== "undefined") {
+          flags[flagName] = true;
+        }
+      },
+      false
+    );
+
+    document.addEventListener(
+      "keyup",
+      (event) => {
+        const flagName = getFlagForKeyCode(event.keyCode);
+        if (typeof flagName !== "undefined") {
+          flags[flagName] = false;
+        }
+      },
+      false
+    );
+
+    // 现在当标记表明事件发生为true是，我们更新（update）camera。我们新增**onTick的监听事件在clock中：
+    this.viewer.clock.onTick.addEventListener((clock) => {
+      const camera = this.viewer.camera;
+    });
+    // 接下来，我们让Camera指向鼠标指向的方向。在变量声明之后添加下列代码到事件监听函数：
+    if (flags.looking) {
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+
+      //  coordinate (0.0, 0.0) will be where the mouse was clicked
+      const x = mousePosition.x - startMousePosition.x;
+    }
+  };
+}
 export default new CesiumEarch();
