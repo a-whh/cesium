@@ -2,6 +2,7 @@ import * as Cesium from "cesium";
 import { Viewer } from "cesium";
 import Cartesian2 from "cesium/Source/Core/Cartesian2";
 import InterpolationAlgorithm from "cesium/Source/Core/InterpolationAlgorithm";
+import EntityCollection from "cesium/Source/DataSources/EntityCollection";
 
 // 创建初始相机位置
 const initialPosition = Cesium.Cartesian3.fromDegrees(
@@ -71,10 +72,33 @@ class CesiumEarch {
         options
       )
     );
+    /**
+     * 监听实体集合变化
+     * @param collection 实体集合
+     * @param added 新增的实体
+     * @param removed 移除的实体
+     * @param changed 变化的实体
+     */
+    const onChanged = (
+      collection: any,
+      added: any,
+      removed: any,
+      changed: any
+    ) => {
+      let msg: string = "added ids";
+      for (let i = 0; i < added.length; i++) {
+        msg += "\n" + added[i].id;
+      }
+      console.log(msg);
+    };
+    // 监听实体集合变化
+    this.viewer.entities.collectionChanged.addEventListener(onChanged);
+
     this.viewer.scene.debugShowFramesPerSecond = true;
     this.createImageryProvider();
     // this.Extras();
-    this.cameraFn();
+    // this.cameraFn();
+    this.dataVisualization();
   }
 
   // 销毁地图
@@ -736,6 +760,10 @@ class CesiumEarch {
     //     },
     //   });
 
+    /**
+     * 自定义键盘事件 控制视角
+     */
+
     // 禁用默认事件操作
     const scene = this.viewer.scene;
     const canvas = this.viewer.canvas;
@@ -752,6 +780,7 @@ class CesiumEarch {
     // 创建变量记录当前鼠标位置，然后标记并跟随Camera移动轨迹：
     let startMousePosition: any;
     let mousePosition: any;
+    // 创建一个标记对象，用于记录当前的移动状态：
     const flags = {
       looking: false,
       moveForward: false,
@@ -763,6 +792,7 @@ class CesiumEarch {
     };
     // 添加一个事件控制用户设置标记，当鼠标左键被点击的时候，用于记录当前鼠标的位置：
     const handler = new Cesium.ScreenSpaceEventHandler(canvas);
+    // 鼠标左键点击事件
     handler.setInputAction((movement: any) => {
       flags.looking = true;
       mousePosition = startMousePosition = Cesium.Cartesian3.clone(
@@ -779,17 +809,17 @@ class CesiumEarch {
     // 创建键盘事件控制用户切换Camera移动标记。我们为下列按键和行为设置了标记：
     function getFlagForKeyCode(keyCode: number) {
       switch (keyCode) {
-        case "W".charCodeAt(0):
+        case "W".charCodeAt(0): // 向前移动
           return "moveForward";
-        case "S".charCodeAt(0):
+        case "S".charCodeAt(0): // 向后移动
           return "moveBackward";
-        case "Q".charCodeAt(0):
+        case "Q".charCodeAt(0): // 向上移动
           return "moveUp";
-        case "E".charCodeAt(0):
+        case "E".charCodeAt(0): // 向下移动
           return "moveDown";
-        case "D".charCodeAt(0):
+        case "D".charCodeAt(0): // 向右移动
           return "moveRight";
-        case "A".charCodeAt(0):
+        case "A".charCodeAt(0): // 向左移动
           return "moveLeft";
         default:
           return undefined;
@@ -821,15 +851,139 @@ class CesiumEarch {
     // 现在当标记表明事件发生为true是，我们更新（update）camera。我们新增**onTick的监听事件在clock中：
     this.viewer.clock.onTick.addEventListener((clock) => {
       const camera = this.viewer.camera;
-    });
-    // 接下来，我们让Camera指向鼠标指向的方向。在变量声明之后添加下列代码到事件监听函数：
-    if (flags.looking) {
-      const width = canvas.clientWidth;
-      const height = canvas.clientHeight;
+      // 接下来，我们让Camera指向鼠标指向的方向。在变量声明之后添加下列代码到事件监听函数：
+      if (flags.looking) {
+        // 获取canvas的宽高
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
 
-      //  coordinate (0.0, 0.0) will be where the mouse was clicked
-      const x = mousePosition.x - startMousePosition.x;
-    }
+        // 计算鼠标移动的距离
+        const x = (mousePosition.x - startMousePosition.x) / width;
+        // 计算鼠标移动的距离
+        const y = -(mousePosition.y - startMousePosition.y) / height;
+
+        // 计算鼠标移动的距离
+        var lookFactor = 0.05;
+        // 向右移动
+        camera.lookRight(x * lookFactor);
+        // 向上移动
+        camera.lookUp(y * lookFactor);
+      }
+
+      // 计算相机的高度
+      var cameraHeight = ellipsoid.cartesianToCartographic(
+        // 将相机位置转换为地心坐标
+        camera.position
+      ).height;
+      var moveRate = cameraHeight * 0.01; //
+
+      // 向前移动
+      if (flags.moveForward) {
+        camera.moveForward(moveRate);
+      }
+      // 向后移动
+      if (flags.moveBackward) {
+        camera.moveBackward(moveRate);
+      }
+      if (flags.moveUp) {
+        camera.moveUp(moveRate);
+      }
+      if (flags.moveDown) {
+        camera.moveDown(moveRate);
+      }
+      if (flags.moveLeft) {
+        camera.moveLeft(moveRate);
+      }
+      if (flags.moveRight) {
+        camera.moveRight(moveRate);
+      }
+    });
   };
+  /**
+   * 4 - 空间数据可视化
+   */
+  public dataVisualization() {
+    // 创建一个面
+    const polygon: any = this.viewer.entities.add({
+      id: "polygon",
+      polygon: {
+        hierarchy: new Cesium.PolygonHierarchy(
+          Cesium.Cartesian3.fromDegreesArray([
+            -109.080842, 45.002073, -105.91517, 45.002073, -104.058488,
+            44.996596, -104.053011, 43.002989, -104.053011, 41.003906,
+          ])
+        ),
+      },
+    });
+    // 设置标题
+    polygon.name = "title";
+    // 设置描述
+    polygon.description =
+      '\
+          <img\
+            width="50%"\
+            style="float:left; margin: 0 1em 1em 0;"\
+            src="//cesium.com/docs/tutorials/creating-entities/Flag_of_Wyoming.svg"/>\
+          <p>\
+            Wyoming is a state in the mountain region of the Western \
+            United States.\
+          </p>\
+          <p>\
+            Wyoming is the 10th most extensive, but the least populous \
+            and the second least densely populated of the 50 United \
+            States. The western two thirds of the state is covered mostly \
+            with the mountain ranges and rangelands in the foothills of \
+            the eastern Rocky Mountains, while the eastern third of the \
+            state is high elevation prairie known as the High Plains. \
+            Cheyenne is the capital and the most populous city in Wyoming, \
+            with a population estimate of 63,624 in 2017.\
+          </p>\
+          <p>\
+            Source: \
+            <a style="color: WHITE"\
+              target="_blank"\
+              href="http://en.wikipedia.org/wiki/Wyoming">Wikpedia</a>\
+          </p>';
+    // camera 控制
+    // this.viewer.zoomTo(
+    //   polygon,
+    //   new Cesium.HeadingPitchRange(
+    //     Cesium.Math.toRadians(30),
+    //     Cesium.Math.toRadians(-90),
+    //     1000000
+    //   )
+    // );
+    // zoomTo和flyTo都是异步函数；
+    this.viewer.flyTo(polygon).then((result) => {
+      if (result) {
+        // 设置选中
+        // this.viewer.selectedEntity = polygon;
+        // 设置位置
+        polygon.position = Cesium.Cartesian3.fromDegrees(-105, 45);
+        // 设置Camera聚焦中心
+        this.viewer.trackedEntity = polygon;
+      }
+    });
+
+    // 管理 Entities 实体
+    // EntityCollection是用于管理和监视一组实体的关联数组。viewer.entities是EntityCollection。EntityCollection包括用于管理实体的方法，如add、remove和removeAll。
+
+    // 有时我们需要更新我们以前创建的实体。所有实体实例都有一个唯一的id，可用于从集合中检索实体。我们可以为实体指定一个ID，否则将自动生成一个ID。
+    // getById 检索实体 根据ID
+    const entity = this.viewer.entities.getById("polygon");
+    // getOrCreateEntity 检索实体 根据ID 如果实体不存在，则创建实体
+    // const entity = this.viewer.entities.getOrCreateEntity("polygon1");
+    // entity.polygon = {
+    //   hierarchy: new Cesium.PolygonHierarchy(
+    //     Cesium.Cartesian3.fromDegreesArray([
+    //       -109.080842, 45.002073, -105.91517, 45.002073, -104.058488, 44.996596,
+    //       117.053011, 43.002989, -104.053011, 41.003906,
+    //     ])
+    //   ),
+    // };
+    // this.viewer.entities.add(entity);
+    // this.viewer.zoomTo(entity);
+    // 当一次更新大量的实体时，将队列更新结束后并在最后发送一个整体事件，这样更具性能。这样Cesium可以在一次通过中处理所需的变化。在示例末尾，在viewer.entities.add之前调用viewer.entities.suspendEvents，并调用viewer.entities.resumeEvents。当再次运行演示时，我们现在得到包含所有65个实体的单一事件。这些调用是引用计数的，因此可以嵌套多个挂起和恢复调用。
+  }
 }
 export default new CesiumEarch();
